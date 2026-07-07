@@ -30,13 +30,12 @@ def _build_instruction(sources_with_content: list) -> str:
     joined = "\n".join(blocks)
 
     return f"""For EACH source below, extract:
-a) metrics — numeric results, accuracy %, BLEU, F1, latency, etc.
-b) datasets — named benchmarks/datasets mentioned
-c) key_findings — 2-3 concise findings (1 sentence each)
-d) quotes — up to 2 verbatim sentences from the source
+a) metrics — numeric results, accuracy %, BLEU, F1, latency, etc. (max 3 items)
+b) datasets — named benchmarks/datasets mentioned (max 3 items)
+c) key_findings — exactly 2 concise findings, 1 short sentence each (under 20 words each)
+d) quotes — exactly 1 verbatim sentence from the source, under 25 words
 
-Each source object MUST NOT exceed 300 tokens. If over budget, cut key_findings first, then quotes.
-
+Be extremely concise. The ENTIRE response across all {len(sources_with_content)} sources must stay well under 6000 tokens total. Prioritize brevity over completeness.
 {joined}
 
 Return ONLY this JSON array, no prose, no markdown fences:
