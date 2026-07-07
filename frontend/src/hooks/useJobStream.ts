@@ -50,8 +50,10 @@ export function useJobStream(jobId: string) {
 
     // The SSE endpoint lives at /api/research/:id/stream.
     // Vite proxy forwards this to http://localhost:8000/api/research/:id/stream
-    const sse = new EventSource(`/api/research/${jobId}/stream`);
+    const BASE = import.meta.env.VITE_API_URL ?? '/api';
+    const sse = new EventSource(`${BASE}/research/${jobId}/stream`);
     sseRef.current = sse;
+
 
     // NOTE: the backend (see app.py's `_sse` helper) sends every event as
     // a plain `data: {...}\n\n` frame with no `event:` field, so per the
