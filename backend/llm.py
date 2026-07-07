@@ -26,20 +26,22 @@ def detect_provider() -> str:
 def build_llm() -> ChatOpenAI:
     provider = detect_provider()
     temp = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+    max_tokens = int(os.getenv("LLM_MAX_TOKENS", "4096"))
 
     if provider == "openai":
         model = os.getenv("OPENAI_MODEL", "gpt-4o")
         logger.info("LLM: OpenAI | model: %s | temp: %.1f", model, temp)
-        return ChatOpenAI(model=model, api_key=os.getenv("OPENAI_API_KEY"), temperature=temp)
+        return ChatOpenAI(model=model, api_key=os.getenv("OPENAI_API_KEY"), temperature=temp, max_tokens=max_tokens)
 
     if provider == "huggingface":
-        model = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct")
+        model = os.getenv("HF_MODEL", "meta-llama/Llama-3.1-8B-Instruct:novita")
         logger.info("LLM: HuggingFace Inference Providers | model: %s | temp: %.1f", model, temp)
         return ChatOpenAI(
             model=model,
             api_key=os.getenv("HF_TOKEN"),
-            base_url="https://router.huggingface.co/v1",   # <-- fixed: was api-inference.huggingface.co
+            base_url="https://router.huggingface.co/v1",
             temperature=temp,
+            max_tokens=max_tokens,
         )
 
     logger.error("No LLM credentials found. Set OPENAI_API_KEY or HF_TOKEN.")
