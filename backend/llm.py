@@ -54,8 +54,11 @@ def build_llm() -> ChatOpenAI:
     retry=retry_if_exception_type(Exception),
     reraise=True,
 )
-def safe_invoke(llm: ChatOpenAI, messages: list) -> str:
+def safe_invoke(llm, messages: list, max_tokens_override: int = None) -> str:
     """Invoke the LLM with exponential backoff — critical for free-tier
     rate limits (HF Inference API 429s especially)."""
-    resp = llm.invoke(messages)
+    if max_tokens_override is not None:
+        resp = llm.invoke(messages, max_tokens=max_tokens_override)
+    else:
+        resp = llm.invoke(messages)
     return resp.content
