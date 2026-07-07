@@ -23,10 +23,14 @@ Keep only the TOP 5 sources by total score. On ties, prefer the more recent one.
 
 
 def _build_instruction(raw_sources: list) -> str:
+    trimmed_sources = [
+        {**s, "snippet": (s.get("snippet") or "")[:200]}
+        for s in raw_sources
+    ]
     return f"""{RUBRIC}
 
 SOURCES (JSON array):
-{json.dumps(raw_sources, indent=2)}
+{json.dumps(trimmed_sources, indent=2)}
 
 Return ONLY this JSON object, no prose, no markdown fences:
 {{"validated_sources": [{{"title": "...", "url": "...", "source_type": "...", "published_date": "...", "snippet": "...", "score": 0, "rationale": "..."}}]}}"""
@@ -49,7 +53,7 @@ def validation_node(state: dict, llm) -> dict:
         {"role": "system", "content": VALIDATOR_SYSTEM_PROMPT},
         {"role": "user", "content": _build_instruction(raw_sources)},
     ]
-    raw = safe_invoke(llm, messages)
+    raw = safe_invoke(llm, messages, max_tokens_override=2048)
     parsed = parse_json_response(raw)
     validated = parsed.get("validated_sources", [])[:5]
 
