@@ -1,0 +1,7 @@
+.env
+marcl/
+__pycache__/
+node_modules/
+*.pyc
+research_report.md
+research_crew.log
