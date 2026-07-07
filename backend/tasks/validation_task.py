@@ -55,7 +55,16 @@ def validation_node(state: dict, llm) -> dict:
     ]
     raw = safe_invoke(llm, messages, max_tokens_override=2048)
     parsed = parse_json_response(raw)
-    validated = parsed.get("validated_sources", [])[:5]
+    
+    # Model sometimes returns a plain JSON array instead of the expected
+    # {"validated_sources": [...]} wrapper -- handle both shapes.
+    if isinstance(parsed, list):
+        validated = parsed[:5]
+    elif isinstance(parsed, dict):
+        validated = parsed.get("validated_sources", [])[:5]
+    else:
+        logger.warning("Validator: unexpected parsed type %s, treating as empty.", type(parsed))
+        validated = []
 
     logger.info("Validator kept %d sources", len(validated))
     return {"validated_sources": validated}

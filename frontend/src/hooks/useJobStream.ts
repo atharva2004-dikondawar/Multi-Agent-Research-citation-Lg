@@ -35,31 +35,36 @@ export function useJobStream(jobId: string) {
   const [isDone, setIsDone]   = useState(false);
   const sseRef = useRef<EventSource | null>(null);
 
+  // Tracks whether we've already reached a terminal state (done or error).
+  // Using a ref (not state) so the error handler always reads the latest
+  // value, even inside a closure created on mount.
+  const completedRef = useRef(false);
+
   useEffect(() => {
     // Reset state whenever jobId changes
     setAgents(initialAgents());
     setReport(null);
     setError(null);
     setIsDone(false);
+    completedRef.current = false;
 
     // The SSE endpoint lives at /api/research/:id/stream.
     // Vite proxy forwards this to http://localhost:8000/api/research/:id/stream
     const sse = new EventSource(`/api/research/${jobId}/stream`);
     sseRef.current = sse;
 
-    // ── Event: agent started ───────────────────────────────────────────────
+    // NOTE: the backend (see app.py's `_sse` helper) sends every event as
+    // a plain `data: {...}\n\n` frame with no `event:` field, so per the
+    // SSE spec these ALL arrive as the generic 'message' event type.
+    // The named listeners below (agent_start/agent_done/done) are kept
+    // for forward-compatibility in case the backend adds named events
+    // later, but today only the 'message' listener actually fires.
     sse.addEventListener("message", (e) => {
-      // Generic 'message' events shouldn't occur, but handle gracefully
       try {
         const data = JSON.parse(e.data);
         handleEvent(data);
       } catch { /* ignore */ }
     });
-
-    // FastAPI emits all events on the default 'message' event type via
-    // `data: {...}\n\n` frames.  The EventSource spec fires these as
-    // 'message' events, so we only need one listener.
-    // However, keep named listeners for forward compatibility:
 
     sse.addEventListener("agent_start", (e) => {
       try { handleEvent({ ...JSON.parse((e as MessageEvent).data), type: "agent_start" }); }
@@ -77,6 +82,15 @@ export function useJobStream(jobId: string) {
     });
 
     sse.addEventListener("error", (e) => {
+      // If we already reached a terminal state (done or error), this
+      // 'error' event is just the browser reacting to the server closing
+      // the connection normally after replaying/finishing events. That is
+      // expected behavior, not a real failure -- ignore it.
+      if (completedRef.current) {
+        sse.close();
+        return;
+      }
+
       if (e instanceof MessageEvent) {
         try {
           const data = JSON.parse(e.data);
@@ -86,9 +100,10 @@ export function useJobStream(jobId: string) {
           }
         } catch { /* ignore */ }
       }
-      // Network-level error (connection dropped, etc.)
+      // Genuine network-level error (connection dropped before completion)
       setError("Connection to server lost. Please refresh.");
       setIsDone(true);
+      completedRef.current = true;
       sse.close();
     });
 
@@ -132,6 +147,7 @@ export function useJobStream(jobId: string) {
         // Mark all agents as done (catches any that didn't fire agent_done)
         setAgents((prev) => prev.map((a) => ({ ...a, status: "done" })));
         setIsDone(true);
+        completedRef.current = true;
         sseRef.current?.close();
         break;
       }
@@ -139,6 +155,7 @@ export function useJobStream(jobId: string) {
       case "error": {
         setError(String(data.message ?? "An unknown error occurred."));
         setIsDone(true);
+        completedRef.current = true;
         sseRef.current?.close();
         break;
       }
