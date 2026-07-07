@@ -20,13 +20,36 @@ Originally built with CrewAI, migrated to LangGraph for lower LLM call overhead 
 ---
 
 ## Architecture
-User Topic
-→ Planner Node    (1 LLM call: generate queries)
-→ Search Node      (0 LLM calls: Exa + Tavily, deterministic)
-→ Validator Node  (1 LLM call: score & filter to top 5)
-→ Extractor Node  (0 LLM calls: fetch content, 1 LLM call: extract evidence)
-→ Synthesizer Node (1 LLM call: produce final Markdown report)
 
+```mermaid
+flowchart TB
+    A(["User enters research topic<br>Frontend - React"]) --> B(["FastAPI Backend API"])
+    B --> C(["Planner Node<br>1 LLM call"])
+    C -- Generate 4–6 queries --> D(["Search Node<br>0 LLM calls"])
+    D -- Fetch sources<br>Exa + Tavily --> E(["Validator Node<br>1 LLM call"])
+    E -- Score &amp; filter<br>top 5 sources --> F(["Extractor Node<br>0 + 1 LLM calls"])
+    F -- Extract metrics,<br>datasets, findings, quotes --> G(["Synthesizer Node<br>1 LLM call"])
+    G -- Generate structured<br>Markdown report --> H(["Final Report"])
+    B -. SSE Streaming .-> I(["Frontend Live Updates"])
+
+    classDef frontend fill:#1f2937,stroke:#10b981,stroke-width:2px,color:#f9fafb
+    classDef backend fill:#111827,stroke:#3b82f6,stroke-width:2px,color:#f9fafb
+    classDef node fill:#1e40af,stroke:#60a5fa,stroke-width:2px,color:#f9fafb
+    classDef output fill:#047857,stroke:#34d399,stroke-width:2px,color:#f9fafb
+
+    A:::frontend
+    B:::backend
+    C:::node
+    D:::node
+    E:::node
+    F:::node
+    G:::node
+    H:::output
+```
+
+**Pipeline summary:** User Topic → Planner (1 LLM call: generate queries) → Search (0 LLM calls: Exa + Tavily, deterministic) → Validator (1 LLM call: score & filter to top 5) → Extractor (0 LLM calls: fetch content, 1 LLM call: extract evidence) → Synthesizer (1 LLM call: produce final report).
+
+**Total: 4 LLM calls per full research run.**
 All nodes communicate via a shared **LangGraph `StateGraph`** (`GraphState` TypedDict) — never raw documents between steps.
 The FastAPI backend streams node progress to the React frontend via **Server-Sent Events (SSE)**.
 
@@ -124,6 +147,8 @@ Writes the report to `research_report.md` in the project root.
 ---
 
 ## Project Structure
+
+```
 research-engine-langgraph/
 ├── backend/
 │   ├── graph_state.py             # Shared LangGraph state schema
@@ -168,6 +193,7 @@ research-engine-langgraph/
 │   └── vite.config.ts
 ├── render.yaml
 └── README.md
+```
 
 ---
 
