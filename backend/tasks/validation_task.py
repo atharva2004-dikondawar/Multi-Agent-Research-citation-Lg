@@ -37,7 +37,13 @@ def validation_node(state: dict, llm) -> dict:
     if not raw_sources:
         logger.warning("Validator: no raw sources to score.")
         return {"validated_sources": []}
-
+    
+    # Cap input size to avoid exceeding the model's context window
+    MAX_SOURCES_FOR_VALIDATION = 25
+    if len(raw_sources) > MAX_SOURCES_FOR_VALIDATION:
+        logger.info("Trimming %d sources down to %d before validation", len(raw_sources), MAX_SOURCES_FOR_VALIDATION)
+        raw_sources = raw_sources[:MAX_SOURCES_FOR_VALIDATION]
+        
     logger.info("Validator: scoring %d sources", len(raw_sources))
     messages = [
         {"role": "system", "content": VALIDATOR_SYSTEM_PROMPT},
