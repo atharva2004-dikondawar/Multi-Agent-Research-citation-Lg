@@ -1,7 +1,8 @@
 .env
 marcl/
 __pycache__/
-node_modules/
 *.pyc
+node_modules/
 research_report.md
 research_crew.log
+frontend/dist/

@@ -2,7 +2,7 @@ services:
   - type: web
     name: research-engine-api
     runtime: python
-    rootDir: .                          # changed from "backend" — must be repo root
+    rootDir: .
     buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
     plan: free
@@ -23,7 +23,9 @@ services:
       - key: OUTPUT_FILE
         value: research_report.md
       - key: ALLOWED_ORIGINS
-        sync: false   # set AFTER frontend deploys, paste its Render URL here
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.7
 
   - type: web
     name: research-engine-ui
@@ -38,4 +40,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        sync: false   # set to your backend's Render URL + /api after backend deploys
+        sync: false
